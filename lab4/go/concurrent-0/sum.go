@@ -6,6 +6,11 @@ import (
 	"os"
 )
 
+type Result struct {
+	Sum int
+	Path string
+}
+
 // read a file from a filepath and return a slice of bytes
 func readFile(filePath string) ([]byte, error) {
 	data, err := ioutil.ReadFile(filePath)
@@ -31,6 +36,12 @@ func sum(filePath string) (int, error) {
 	return _sum, nil
 }
 
+func sumRoutine(filePath string, out chan Result) {
+	//filePath := <-in
+	_sum, _ := sum(filePath)
+	_result := Result{_sum, filePath}
+	out <- _result
+}
 // print the totalSum for all files and the files with equal sum
 func main() {
 	if len(os.Args) < 2 {
@@ -40,16 +51,17 @@ func main() {
 
 	var totalSum int64
 	sums := make(map[int][]string)
+	result := make(chan Result)
 	for _, path := range os.Args[1:] {
-		_sum, err := sum(path)
+		go sumRoutine(path, result)
+	}
 
-		if err != nil {
-			continue
-		}
-
+	for i:=0; i < len(os.Args[1:]); i++ {
+		_result := <-result
+		_sum := _result.Sum
+		_filePath := _result.Path
 		totalSum += int64(_sum)
-
-		sums[_sum] = append(sums[_sum], path)
+		sums[_sum] = append(sums[_sum], _filePath)
 	}
 
 	fmt.Println(totalSum)
@@ -60,3 +72,5 @@ func main() {
 		}
 	}
 }
+
+
